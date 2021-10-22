@@ -16,9 +16,7 @@ class encoder(nn.Module):
         super().__init__()
         self.encoder = encoder
         # EfficientNet.from_pretrained('efficientnet-b2',)
-
         self.cw = cw
-        # print(encoder)
         self.d_proj = 1000
         self.proj = nn.Sequential(
             nn.Linear(self.d_proj, 2),
@@ -38,7 +36,13 @@ class encoder(nn.Module):
 
 
 class cls(pl.LightningModule):
-    def __init__(self, hparams=None, ssl_pretrain=False, enc=None, expe=None, run=0, **kargs):
+    """
+    Args:
+        expe : Comet experiment object
+        run : fold number of current run
+    """
+
+    def __init__(self, hparams=None, expe=None, run=0, **kargs):
         super().__init__()
         self.cw = kargs.get('class_weight')
         self.expe = expe    

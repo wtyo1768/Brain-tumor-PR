@@ -16,6 +16,7 @@ def normalize(df, col):
     df[col] =  (df[col] - df[col].mean() ) /  df[col].std()
     return df 
 
+
 def numerical_loader():
     df = pd.read_excel(xls_file, sheet_name='Sheet2')
     df = df.drop(columns=df.columns[0])
@@ -26,12 +27,15 @@ def numerical_loader():
         '1st MRI.1', 'x', 'y', 'z', 
         'WHO grade 1.2.3 (benign, atypical, malignant)', '> 1y F/U MRI after OP (Y:1 N:0)', 
         'Location 1: Skull base(SB), 2: PSPF, 3: Convexity, 4: Others',
+        'F/U time (month)', 'PR time (months)',
     ])
     for c in ['ADC tumor', 'Maximal diameter',  ]:
         df = normalize(df, c)
     
     scaler = MinMaxScaler()
-    minmax_col = ['PR time (months)', 'F/U time (month)', 'Age']
+    minmax_col = [
+        # 'PR time (months)', 'F/U time (month)', 
+        'Age']
     df[minmax_col] = scaler.fit_transform(df[minmax_col])
     return df
 
@@ -105,23 +109,28 @@ data_pipe = {
     'eval' : lambda stat:T.Compose(test_aug(stat)),
 }
 stat = {
-    'T1':[[0.1302, .1302, .1302], [.1656, .1656, .1656]],
+    'T1':   [[.1302]*3, [.1656]*3],
     'T1c':  [[.1345]*3, [.1772]*3],
     'T2':   [[.1329]*3, [.1781]*3],
     'Flair':[[.1453]*3, [.1869]*3],
 }
 
 
-
 class PR_Dataset(Dataset):
+    """
+    Args:
+        dtype: MRI type of image
+
+    """
     def __init__(self, df, dtype, eval_mode=False):
         super().__init__()
-        self.df = df        
+        self.df = df    
+        self.dtype = dtype    
         self.T = data_pipe['eval'] if eval_mode else data_pipe['train']
-
+        
         if dtype not in ['T1', 'T1c', 'T2', 'Flair']: raise ValueError('Wrong MRI type')
-        self.dtype = dtype
-        self.features = []
+        
+        self.features = []  
         for i in range(self.df.shape[0]):
             row = self.df.iloc[i]
             patient_id = str(row["病歷號 (yellow in WHO grade I file) "])
@@ -150,7 +159,7 @@ class PR_Dataset(Dataset):
 
     def __getitem__(self, index):
         example = self.features[index].copy()
-        
+        #TODO add 4 type of MRI to here
         for k in ['img']:
             example[k] = self.T(stat[self.dtype])(example[k])
         return example

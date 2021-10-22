@@ -3,7 +3,7 @@ from sklearn.svm import SVC, NuSVC
 from sklearn.model_selection import cross_validate
 from loader import numerical_loader
 import numpy as np
-
+from cfg import *
 
 df = numerical_loader()
 y_df = df.pop('Progression/Recurrence (Yes:1 No:0)')
@@ -21,9 +21,9 @@ clf = LogisticRegression(
 # clf = NuSVC(class_weight='balanced', max_iter=100, nu=.3)
 
 
-scoring = ['accuracy', 'precision', 'recall', 'f1']
-scores = cross_validate(clf, df, y_df, cv=10, scoring=scoring, return_train_score=True)
+scoring = ['accuracy', 'precision', 'recall', 'roc_auc']
+scores = cross_validate(clf, df, y_df, cv=K_FOLD, scoring=scoring, return_train_score=True)
 
-for metric in [ 'test_accuracy', 'test_precision', 'test_recall', 'test_f1']:
+for metric in [ 'test_accuracy', 'test_precision', 'test_recall', 'test_roc_auc']:
     print(metric, ':', np.mean(scores[metric])) 
 
