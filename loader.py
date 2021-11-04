@@ -1,7 +1,6 @@
 import pandas as pd
 import torch
 import numpy as np
-from cfg import *
 from torch.utils.data import DataLoader, Dataset
 import cv2
 import os
@@ -10,6 +9,8 @@ from torchvision import transforms as T
 import random
 from torch import nn
 from sklearn.preprocessing import MinMaxScaler
+
+from cfg import *
 
 
 def normalize(df, col):
@@ -28,6 +29,8 @@ def numerical_loader():
         'WHO grade 1.2.3 (benign, atypical, malignant)', '> 1y F/U MRI after OP (Y:1 N:0)', 
         'Location 1: Skull base(SB), 2: PSPF, 3: Convexity, 4: Others',
         'F/U time (month)', 'PR time (months)',
+        'R/T before P/R (Y:1 N:0) ',
+        '(1) Discovery 750 (2) Signa HD (3) Avanto (4) Symphony tim (5) Aera (6) Others'
     ])
     for c in ['ADC tumor', 'Maximal diameter',  ]:
         df = normalize(df, c)
@@ -35,8 +38,14 @@ def numerical_loader():
     scaler = MinMaxScaler()
     minmax_col = [
         # 'PR time (months)', 'F/U time (month)', 
-        'Age']
+        'Age',
+    ]
     df[minmax_col] = scaler.fit_transform(df[minmax_col])
+    # enc = OneHotEncoder(handle_unknown='ignore')
+    # df = pd.get_dummies(df,prefix=['Special histology'], columns = ['Special histology (0:meningothelial 1:fibroblastic 2: angiomatous 3:transitional (mixed) 4:psammoma 5: microcystic 6: metaplastic'])
+    # df = pd.get_dummies(df,prefix=['Simpson grade resection'], columns = ['Simpson grade resection (1-5)'])
+
+
     return df
 
 
@@ -120,7 +129,7 @@ class PR_Dataset(Dataset):
     """
     Args:
         dtype: MRI type of image
-
+        eval_mode : Specify eval mode to disabled the data augmentation
     """
     def __init__(self, df, dtype, eval_mode=False):
         super().__init__()
@@ -138,12 +147,12 @@ class PR_Dataset(Dataset):
             if patient_id in ['16962871']: continue
             label = row["Progression/Recurrence (Yes:1 No:0)"]
             pr_class = 'PR' if label else 'non_PR'
-            f = f'./data/PSPF meningioma 20210904/{pr_class}_jpg/{patient_id}/{dtype}.jpg'
+
+            f = f'{jpg_folder_path}/{pr_class}_jpg/{dtype}/{patient_id}.jpg'
             assert(os.path.isfile(f))
 
-            img = Image.open(f).convert('RGB')
             self.features.append({
-                'img' : img,
+                'img' : Image.open(f).convert('RGB'),
                 'label' : torch.tensor(label),
             })
 
@@ -169,4 +178,4 @@ class PR_Dataset(Dataset):
 if __name__ == '__main__':
     df = pd.read_excel(xls_file, sheet_name='Sheet2')
     # ['T1', 'T1c', 'T2', 'Flair']
-    print(PR_Dataset(df, 'Flair').__getitem__(1)['img'].size())
+    print(PR_Dataset(df, 'T1c').__getitem__(1)['img'].size())
