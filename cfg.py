@@ -8,7 +8,7 @@ dcm_folder_path = "./data/PSPF20210904"
 jpg_folder_path = "./data/PSPF20210904"
 voc_data_path = "./data/PSPF_voc_data"
 
-segmented_data_path = "./data/PSPF meningioma 20210904/PR_jpg"
+segmented_data_path = "./data/segmented_img"
 
 
 

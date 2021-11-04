@@ -3,8 +3,10 @@ workspace='rockyo'
 
 cd /home/$workspace/Chemei-PR
 
+
 # python3 convert_jpg.py
 
+# Prepare VOC dataset
 
 rm -rf ./data/PSPF_voc_data
 
@@ -15,7 +17,6 @@ rm -rf ./data/PSPF_voc_data
 ./data/PSPF20210904/non_PR_jpg/T1c/ ./data/PSPF_voc_data/non_PR/T1c --labels ./data/segment_label.txt --noviz
 
 
+# Segmentation
 
-# Segment
-
-# python3 segment_tumor.py
+python3 segment_tumor.py
