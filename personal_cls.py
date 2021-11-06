@@ -32,8 +32,7 @@ print('Number of Patients and feature :', df.shape[0], df.shape[1], )
 print('Number of Case 1 and Case 2 :', y_df[y_df==0].shape[0],  y_df[y_df==1].shape[0])
 print('-------------------------')
 print("Using feature:")
-for i, c in enumerate(df.columns):
-        print(i,'|', c)
+for i, c in enumerate(df.columns): print(i,'|', c)
 print('-------------------------')
 
 sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
@@ -41,11 +40,11 @@ df = sel.fit_transform(df)
 
 def run():
         clf = lgb.LGBMClassifier(
-                class_weight='balanced',
+                # class_weight='balanced',
                 max_depth=-1,
-                num_leaves=30,
+                num_leaves=31,
                 objective='binary',
-                n_estimators=20,
+                n_estimators=100,
         )
         # clf = LogisticRegression(
         #         solver='liblinear',
@@ -90,4 +89,4 @@ else:
                 result = run()
                 for m in metric: total_result[m].append(result[m])
 
-        for m in metric:  print(m, ':', np.mean(total_result[m])) 
+        for m in metric[4:]:  print(m, ':', np.mean(total_result[m])) 

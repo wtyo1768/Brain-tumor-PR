@@ -25,14 +25,15 @@ def numerical_loader():
         'T1+C (srs/img)', 'T1 (srs/img)', 'T2 (srs/img)', 
         'FLAIR (srs/img)', '1st MRI', 'OP date',	
         'The Latest MRI ', 'Date of MRI with P/R ',
-        '1st MRI.1', 'x', 'y', 'z', 
+        '1st MRI.1',
+        # 'x', 'y', 'z', 
         'WHO grade 1.2.3 (benign, atypical, malignant)', '> 1y F/U MRI after OP (Y:1 N:0)', 
         'Location 1: Skull base(SB), 2: PSPF, 3: Convexity, 4: Others',
         'F/U time (month)', 'PR time (months)',
         'R/T before P/R (Y:1 N:0) ',
         '(1) Discovery 750 (2) Signa HD (3) Avanto (4) Symphony tim (5) Aera (6) Others'
     ])
-    for c in ['ADC tumor', 'Maximal diameter',  ]:
+    for c in ['ADC tumor', 'Maximal diameter', 'x', 'y', 'z',   ]:
         df = normalize(df, c)
     
     scaler = MinMaxScaler()
@@ -41,9 +42,8 @@ def numerical_loader():
         'Age',
     ]
     df[minmax_col] = scaler.fit_transform(df[minmax_col])
-    # enc = OneHotEncoder(handle_unknown='ignore')
-    # df = pd.get_dummies(df,prefix=['Special histology'], columns = ['Special histology (0:meningothelial 1:fibroblastic 2: angiomatous 3:transitional (mixed) 4:psammoma 5: microcystic 6: metaplastic'])
-    # df = pd.get_dummies(df,prefix=['Simpson grade resection'], columns = ['Simpson grade resection (1-5)'])
+    df = pd.get_dummies(df,prefix=['Special histology'], columns = ['Special histology (0:meningothelial 1:fibroblastic 2: angiomatous 3:transitional (mixed) 4:psammoma 5: microcystic 6: metaplastic'])
+    df = pd.get_dummies(df,prefix=['Simpson grade resection'], columns = ['Simpson grade resection (1-5)'])
 
 
     return df
@@ -148,11 +148,11 @@ class PR_Dataset(Dataset):
             label = row["Progression/Recurrence (Yes:1 No:0)"]
             pr_class = 'PR' if label else 'non_PR'
 
-            f = f'{jpg_folder_path}/{pr_class}_jpg/{dtype}/{patient_id}.jpg'
+            f = f'{segmented_img_dir}/{pr_class}/{dtype}/{patient_id}.jpg'
             assert(os.path.isfile(f))
 
             self.features.append({
-                'img' : Image.open(f).convert('RGB'),
+                'T1' : Image.open(f).convert('RGB'),
                 'label' : torch.tensor(label),
             })
 
@@ -169,7 +169,7 @@ class PR_Dataset(Dataset):
     def __getitem__(self, index):
         example = self.features[index].copy()
         #TODO add 4 type of MRI to here
-        for k in ['img']:
+        for k in ['T1']:
             example[k] = self.T(stat[self.dtype])(example[k])
         return example
     
@@ -178,4 +178,5 @@ class PR_Dataset(Dataset):
 if __name__ == '__main__':
     df = pd.read_excel(xls_file, sheet_name='Sheet2')
     # ['T1', 'T1c', 'T2', 'Flair']
-    print(PR_Dataset(df, 'T1c').__getitem__(1)['img'].size())
+    #TODO Fix T1c to T1
+    print(PR_Dataset(df, 'T1c').__getitem__(1)['T1'].size())

@@ -1,11 +1,11 @@
 import os 
 import numpy as np
-from cfg import *
 import cv2
+from cfg import *
 
 
-output_dir = segmented_data_path
 MRI_TYPE = ['T1c']
+output_dir = segmented_img_dir
 
 
 for dtype in MRI_TYPE:
@@ -15,6 +15,7 @@ for dtype in MRI_TYPE:
         if not os.path.isdir(outdir): os.makedirs(outdir)
 
         _dir = f'{voc_data_path}/{patient_class}/{dtype}/JPEGImages'
+        assert(os.path.isdir(_dir))
         for dirPath, dirNames, fileNames in os.walk(_dir):
             for f in fileNames:
                 img_path = os.path.join(dirPath, f)
