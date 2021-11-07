@@ -1,10 +1,9 @@
 workspace='rockyo'
-
-
 cd /home/$workspace/Chemei-PR
 
+echo 'Converting dcm raw dataset into jpg files...'
 
-# python3 convert_jpg.py
+python3 src/preprocess/convert_jpg.py
 
 echo 'Preparing VOC dataset...'
 
@@ -19,4 +18,4 @@ rm -rf ./data/PSPF_voc_data
 
 echo 'Start segmentation...'
 
-python3 segment_tumor.py
+python3 src/preprocess/segment_tumor.py

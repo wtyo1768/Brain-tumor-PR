@@ -9,8 +9,8 @@ from torchvision import transforms as T
 import random
 from torch import nn
 from sklearn.preprocessing import MinMaxScaler
-
 from cfg import *
+from sklearn.feature_selection import VarianceThreshold
 
 
 def normalize(df, col):
@@ -45,8 +45,28 @@ def numerical_loader():
     df = pd.get_dummies(df,prefix=['Special histology'], columns = ['Special histology (0:meningothelial 1:fibroblastic 2: angiomatous 3:transitional (mixed) 4:psammoma 5: microcystic 6: metaplastic'])
     df = pd.get_dummies(df,prefix=['Simpson grade resection'], columns = ['Simpson grade resection (1-5)'])
 
+    
 
-    return df
+    df = df.fillna(df.mean())
+    y_df = df.pop('Progression/Recurrence (Yes:1 No:0)')
+    y_df = y_df.astype('int32')
+
+    origin_columns = df.columns
+    sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
+    df = sel.fit_transform(df)
+    masked_columns = sel._get_support_mask()
+
+    print(origin_columns)
+    print(masked_columns.shape, origin_columns.shape)
+    print('Number of Patients and feature :', df.shape[0], df.shape[1], )
+    print('Number of Case 1 and Case 2 :', y_df[y_df==0].shape[0],  y_df[y_df==1].shape[0])
+    print('-------------------------')
+    print("Using feature:")
+    for i, c in enumerate(origin_columns): 
+        if masked_columns[i]: print(i,'|', c)
+    print('-------------------------')
+    
+    return df, y_df
 
 
 class RandomApply(nn.Module):

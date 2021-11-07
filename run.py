@@ -36,6 +36,7 @@ df = pd.read_excel(xls_file, sheet_name='Sheet2')
 seed = np.random.randint(66) if args.seed==-1 else args.seed
 metric = []
 K = K_FOLD
+
 for i, (train_idx, val_idx) in enumerate(StratifiedKFold(n_splits=K, random_state=seed, shuffle=True).split(df, df['Progression/Recurrence (Yes:1 No:0)'])):
     
     if not args.fold==-1:

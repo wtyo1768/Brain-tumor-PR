@@ -4,12 +4,12 @@ COMET_WORK_SPACE = "wtyo1768"
 
 # Data directory 
 
-xls_file = './data/PSPF meningioma 20211005.xls'
-dcm_folder_path = "./data/PSPF20210904"
-jpg_folder_path = "./data/PSPF20210904"
-voc_data_path = "./data/PSPF_voc_data"
+xls_file = '/home/rockyo/Chemei-PR/data/PSPF meningioma 20211005.xls'
+dcm_folder_path = "/home/rockyo/Chemei-PR/data/PSPF20210904"
+jpg_folder_path = "/home/rockyo/Chemei-PR/data/PSPF20210904"
+voc_data_path = "/home/rockyo/Chemei-PR/data/PSPF_voc_data"
 
-segmented_img_dir = "./data/segmented_img"
+segmented_img_dir = "/home/rockyo/Chemei-PR/data/segmented_img"
 
 
 

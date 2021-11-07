@@ -5,10 +5,7 @@ import pydicom
 import numpy as np
 import os
 import cv2
-
-
 from cfg import *
-# from loader import read_xls
 
 excel_data = pd.read_excel(xls_file, sheet_name="Sheet2")
 # excel_data = read_xls()
