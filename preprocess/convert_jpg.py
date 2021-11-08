@@ -58,8 +58,10 @@ dcm_folder_path2 = f"{dcm_folder_path}/PR"
 error_patient = []
 MRI_TYPE = ['T1', 'T1c', 'Flair', 'T2']
 for d in MRI_TYPE:
-    os.makedirs(f'{jpg_folder_path}/{d}')  # for non PR
-    os.makedirs(f'{jpg_folder_path2}/{d}')  # for PR
+    if not os.path.isdir(f'{jpg_folder_path}/{d}'):
+        os.makedirs(f'{jpg_folder_path}/{d}')  # for non PR
+    if not os.path.isdir(f'{jpg_folder_path2}/{d}'):
+        os.makedirs(f'{jpg_folder_path2}/{d}')  # for PR
 
 print("convert start : wait......")
 # ******************************convert block***********************************************
@@ -69,8 +71,8 @@ while(True):
     for patient_id in path_list:
         if patient_id in ['16962871', '14185785']:  # data loss
             continue
-        print(type(os.listdir(folder_path)))
-        print(patient_id)
+        # print(type(os.listdir(folder_path)))
+        # print(patient_id)
         picture_count = set()
         T1c = img_dict[int(patient_id)][0]
         T1 = img_dict[int(patient_id)][1]

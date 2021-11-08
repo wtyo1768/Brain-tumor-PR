@@ -4,7 +4,7 @@ import cv2
 from cfg import *
 
 
-MRI_TYPE = ['T1c']
+MRI_TYPE = ['T1', 'T1c', 'T2', 'Flair']
 output_dir = segmented_img_dir
 
 
