@@ -47,9 +47,7 @@ class cls(pl.LightningModule):
         self.cw = kargs.get('class_weight')
         self.expe = expe    
         self.run = run
-        if hparams:
-            self.lr = hparams.LR
-        
+        if hparams: self.lr = hparams.LR
         self.encoder = encoder(models.resnet18(pretrained=True), self.cw)
 
 

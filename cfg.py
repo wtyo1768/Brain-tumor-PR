@@ -17,4 +17,4 @@ segmented_img_dir = "/home/rockyo/Chemei-PR/data/segmented_img"
 # Hyperparams
 
 K_FOLD=5
-image_size = 224
+IMAGE_SIZE = 96

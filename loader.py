@@ -122,14 +122,14 @@ train_aug = lambda ele:[
     T.RandomHorizontalFlip(),
     T.RandomVerticalFlip(),
     
-    ImgPad(image_size),  
-    T.Resize((image_size, image_size)),
+    ImgPad(IMAGE_SIZE),  
+    T.Resize((IMAGE_SIZE, IMAGE_SIZE)),
     T.ToTensor(),
     T.Normalize(mean=ele[0], std=ele[1]),
 ]
 test_aug = lambda ele:[     
-    ImgPad(image_size), 
-    T.Resize((image_size, image_size)), 
+    ImgPad(IMAGE_SIZE), 
+    T.Resize((IMAGE_SIZE, IMAGE_SIZE)), 
     T.ToTensor(), 
     T.Normalize(mean=ele[0], std=ele[1]),
 ]
@@ -139,7 +139,7 @@ data_pipe = {
 }
 stat = {
     'T1':   [[.1302]*3, [.1656]*3],
-    'T1c':  [[.1345]*3, [.1772]*3],
+    'T1c':  [[.1038]*3, [.1031]*3],
     'T2':   [[.1329]*3, [.1781]*3],
     'Flair':[[.1453]*3, [.1869]*3],
 }
@@ -157,7 +157,8 @@ class PR_Dataset(Dataset):
         self.dtype = dtype    
         self.T = data_pipe['eval'] if eval_mode else data_pipe['train']
         
-        if dtype not in ['T1', 'T1c', 'T2', 'Flair']: raise ValueError('Wrong MRI type')
+        if dtype not in ['T1', 'T1c', 'T2', 'Flair', 'Mixed']: 
+            raise ValueError('Wrong MRI type')
         
         self.features = []  
         for i in range(self.df.shape[0]):
@@ -172,7 +173,7 @@ class PR_Dataset(Dataset):
             assert(os.path.isfile(f))
 
             self.features.append({
-                'T1' : Image.open(f).convert('RGB'),
+                'img' : Image.open(f).convert('RGB'),
                 'label' : torch.tensor(label),
             })
 
@@ -189,8 +190,7 @@ class PR_Dataset(Dataset):
     def __getitem__(self, index):
         example = self.features[index].copy()
         #TODO add 4 type of MRI to here
-        for k in ['T1']:
-            example[k] = self.T(stat[self.dtype])(example[k])
+        example['img'] = self.T(stat[self.dtype])(example['img'])
         return example
     
 
@@ -199,4 +199,4 @@ if __name__ == '__main__':
     df = pd.read_excel(xls_file, sheet_name='Sheet2')
     # ['T1', 'T1c', 'T2', 'Flair']
     #TODO Fix T1c to T1
-    print(PR_Dataset(df, 'T1c').__getitem__(1)['T1'].size())
+    print(PR_Dataset(df, 'T1c').__getitem__(1)['img'].size())

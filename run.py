@@ -19,6 +19,7 @@ experiment = Experiment(
     workspace=COMET_WORK_SPACE,
 )
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--BATCH_SIZE', type=int, default=32)
 parser.add_argument('--LR', type=float, default=4e-5)
@@ -26,7 +27,7 @@ parser.add_argument('--i', type=int, default=0)
 parser.add_argument('--cls', type=str,)
 parser.add_argument('--seed', type=int, default=-1)
 parser.add_argument('--fold', type=int, default=-1)
-parser.add_argument('--MRI', type=str, default='T1')
+parser.add_argument('--dtype', type=str, default='T1')
 
 parser = pl.Trainer.add_argparse_args(parser)
 args = parser.parse_args()
@@ -35,9 +36,9 @@ args = parser.parse_args()
 df = pd.read_excel(xls_file, sheet_name='Sheet2')
 seed = np.random.randint(66) if args.seed==-1 else args.seed
 metric = []
-K = K_FOLD
 
-for i, (train_idx, val_idx) in enumerate(StratifiedKFold(n_splits=K, random_state=seed, shuffle=True).split(df, df['Progression/Recurrence (Yes:1 No:0)'])):
+
+for i, (train_idx, val_idx) in enumerate(StratifiedKFold(n_splits=K_FOLD, random_state=seed, shuffle=True).split(df, df['Progression/Recurrence (Yes:1 No:0)'])):
     
     if not args.fold==-1:
         if not i==args.fold:
@@ -85,7 +86,6 @@ for i, (train_idx, val_idx) in enumerate(StratifiedKFold(n_splits=K, random_stat
     model = cls.load_from_checkpoint(checkpoint.best_model_path, class_weight=train_ds.class_weight, enc=args.cls, expe=experiment)
     pred = trainer.validate(model, val_loader)
     metric.append(pred[0])
-    # print(pred[0])
 
 
 if args.fold==-1:
@@ -93,7 +93,7 @@ if args.fold==-1:
         if k=='val_loss':continue
         r = 0
         for e in metric: r += e[k]
-        print(f'cv_{k}', ':', r/K)
+        print(f'cv_{k}', ':', r/K_FOLD)
 
 print('seed:', seed)
 

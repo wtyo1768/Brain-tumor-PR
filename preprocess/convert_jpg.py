@@ -7,6 +7,7 @@ import os
 import cv2
 from cfg import *
 
+
 excel_data = pd.read_excel(xls_file, sheet_name="Sheet2")
 # excel_data = read_xls()
 '''

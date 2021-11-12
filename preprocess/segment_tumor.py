@@ -2,7 +2,7 @@ import os
 import numpy as np
 import cv2
 from cfg import *
-
+import glob
 
 MRI_TYPE = ['T1', 'T1c', 'T2', 'Flair']
 output_dir = segmented_img_dir
@@ -22,6 +22,7 @@ def segment_black_region(img):
     return img_segmented
 
 
+#TODO fix to glob
 for dtype in MRI_TYPE:
     for patient_class in ['PR', 'non_PR']: 
         outdir = f'{output_dir}/{patient_class}/{dtype}'
@@ -29,17 +30,24 @@ for dtype in MRI_TYPE:
 
         _dir = f'{voc_data_path}/{patient_class}/{dtype}/JPEGImages'
         assert(os.path.isdir(_dir))
-        for dirPath, dirNames, fileNames in os.walk(_dir):
-            for f in fileNames:
-                img_path = os.path.join(dirPath, f)
-                assert(os.path.isfile(img_path))
+        # for dirPath, dirNames, fileNames in os.walk(_dir):
+        for f in glob.glob(f'{_dir}/*.jpg'):
+                print(f)
+            # for f in fileNames:
+                # img_path = os.path.join(dirPath, f)
+                img_path = f
                 mask_path = img_path.replace('JPEGImages', 'SegmentationClassPNG').replace('.jpg', '.png')
-                img = cv2.imread(img_path, 0)
+                print(mask_path)
+                assert os.path.isfile(img_path)
+                assert os.path.isfile(mask_path)
                 
-                
+                img = cv2.imread(img_path, 0)              
                 ori_mask = cv2.imread(mask_path, 0)
                 
+                ori_mask = cv2.resize(ori_mask, [img.shape[1], img.shape[0]])
+                # print(ori_mask.shape)
                 mask = np.array(ori_mask>0, dtype=np.int)
+
                 segmented_img = img * mask
                 segmented_img = segment_black_region(segmented_img)
                 cv2.imwrite(f'{output_dir}/{patient_class}/{dtype}/{f}', segmented_img)

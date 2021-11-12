@@ -13,12 +13,12 @@ echo '**************************'
 
 
 # ['T1', 'T1c', 'T2', 'Flair']
-for i in $(seq 0 0);
+for i in $(seq 0 100);
 do
     python3 run.py  \
         --gpu 1 \
         --max_epochs $EPOCHS\
         --BATCH_SIZE $BATCH_SIZE\
         --LR $LR \
-        --MRI 'T1'
+        --dtype 'T1'
 done
