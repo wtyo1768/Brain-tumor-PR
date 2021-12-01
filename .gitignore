@@ -3,3 +3,4 @@ lightning_logs
 checkpoints
 .ipynb_checkpoints
 __pycache__
+.cometml-runs

@@ -11,6 +11,7 @@ from torch import nn
 from sklearn.preprocessing import MinMaxScaler
 from cfg import *
 from sklearn.feature_selection import VarianceThreshold
+from monai import transforms 
 
 
 def normalize(df, col):
@@ -33,7 +34,7 @@ def numerical_loader():
         'R/T before P/R (Y:1 N:0) ',
         '(1) Discovery 750 (2) Signa HD (3) Avanto (4) Symphony tim (5) Aera (6) Others'
     ])
-    for c in ['ADC tumor', 'Maximal diameter', 'x', 'y', 'z',   ]:
+    for c in ['ADC tumor', 'Maximal diameter', 'x', 'y', 'z' ]:
         df = normalize(df, c)
     
     scaler = MinMaxScaler()
@@ -45,9 +46,7 @@ def numerical_loader():
     df = pd.get_dummies(df,prefix=['Special histology'], columns = ['Special histology (0:meningothelial 1:fibroblastic 2: angiomatous 3:transitional (mixed) 4:psammoma 5: microcystic 6: metaplastic'])
     df = pd.get_dummies(df,prefix=['Simpson grade resection'], columns = ['Simpson grade resection (1-5)'])
 
-    
-
-    df = df.fillna(df.mean())
+    df = df.fillna(df.mean(0))
     y_df = df.pop('Progression/Recurrence (Yes:1 No:0)')
     y_df = y_df.astype('int32')
 
@@ -55,6 +54,7 @@ def numerical_loader():
     sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
     df = sel.fit_transform(df)
     masked_columns = sel._get_support_mask()
+    from sklearn.feature_selection import SelectPercentile, chi2, mutual_info_classif
 
     print(origin_columns)
     print(masked_columns.shape, origin_columns.shape)
@@ -65,7 +65,8 @@ def numerical_loader():
     for i, c in enumerate(origin_columns): 
         if masked_columns[i]: print(i,'|', c)
     print('-------------------------')
-    
+    # df = SelectPercentile(mutual_info_classif, percentile=70).fit_transform(df, y_df)
+
     return df, y_df
 
 
@@ -88,7 +89,7 @@ class ImgPad(nn.Module):
         w, h = img.size
         left =  (self.img_size - w) // 2
         right =  self.img_size - w - left
-        top =   (self.img_size - h) //2
+        top =   (self.img_size - h) // 2
         bottom = self.img_size - h - top
         left, top = max(left, 0), max(top, 0) 
         right, bottom = max(right, 0), max(bottom, 0)
@@ -107,17 +108,18 @@ class crop(nn.Module):
 
 
 train_aug = lambda ele:[
-    # RandomApply(
-    #     T.ColorJitter(0.8, 0.8, 0.8, 0.2),
-    #     p=0.8
-    #     # p = 0.5
-    # ),
-    # T.RandomGrayscale(p=0.2),
-    # RandomApply(
-    #     T.GaussianBlur((3, 3), (1.0, 2.0)),
-    #     p = 0.2
-    # ),
-    RandomApply(crop(.75), p = 0.5),
+    RandomApply(
+        T.ColorJitter(0.8, 0.8, 0.8, 0.2),
+        p=0.8
+        # p = 0.5
+    ),
+    T.RandomGrayscale(p=0.2),
+    # T.RandomAffine(),
+    RandomApply(
+        T.GaussianBlur((3, 3), (1.0, 2.0)),
+        p = 0.2
+    ),
+    RandomApply(crop(.8), p = 0.5),
     T.RandomRotation(2.8),
     T.RandomHorizontalFlip(),
     T.RandomVerticalFlip(),
@@ -125,23 +127,53 @@ train_aug = lambda ele:[
     ImgPad(IMAGE_SIZE),  
     T.Resize((IMAGE_SIZE, IMAGE_SIZE)),
     T.ToTensor(),
-    T.Normalize(mean=ele[0], std=ele[1]),
+    # T.Normalize(mean=ele[0], std=ele[1]),
 ]
 test_aug = lambda ele:[     
     ImgPad(IMAGE_SIZE), 
     T.Resize((IMAGE_SIZE, IMAGE_SIZE)), 
     T.ToTensor(), 
-    T.Normalize(mean=ele[0], std=ele[1]),
+    # T.Normalize(mean=ele[0], std=ele[1]),
 ]
-data_pipe = {
-    'train': lambda stat:T.Compose(train_aug(stat)),
-    'eval' : lambda stat:T.Compose(test_aug(stat)),
+
+data_pipe = {   
+    # 'train': lambda stat:T.Compose(train_aug(stat)),
+    # 'eval' : lambda stat:T.Compose(test_aug(stat)),
+    'train' : transforms.Compose([
+        transforms.LoadImage(image_only=True, reader='pilreader'),
+        transforms.AddChannel(),
+        transforms.RepeatChannel(3),
+        # transforms.HistogramNormalize(),
+        transforms.ScaleIntensity(),
+        transforms.RandGaussianNoise(prob=0.4),
+        transforms.Affine(
+            rotate_params=np.pi/4, scale_params=(1.2, 1.2),
+            translate_params=(5, 5), padding_mode='zeros', image_only=True
+        ),
+        transforms.RandRotate(range_x=np.pi / 12, prob=0.5, keep_size=True),
+        transforms.RandFlip(spatial_axis=0, prob=0.5),
+        transforms.RandZoom(min_zoom=0.9, max_zoom=1.1, prob=0.5),
+        
+        transforms.SpatialPad(spatial_size=[IMAGE_SIZE, IMAGE_SIZE, ]),
+        transforms.Resize([IMAGE_SIZE, IMAGE_SIZE, ]),
+        transforms.EnsureType(),
+    ]),
+    'eval' : transforms.Compose([
+        transforms.LoadImage(image_only=True, reader='pilreader'),
+        transforms.AddChannel(),
+        transforms.RepeatChannel(3),
+        transforms.ScaleIntensity(),
+        
+        transforms.SpatialPad(spatial_size=[IMAGE_SIZE, IMAGE_SIZE, ]),
+        transforms.Resize([IMAGE_SIZE, IMAGE_SIZE,]),
+        transforms.EnsureType(),
+    ]),
 }
 stat = {
-    'T1':   [[.1302]*3, [.1656]*3],
-    'T1c':  [[.1038]*3, [.1031]*3],
-    'T2':   [[.1329]*3, [.1781]*3],
-    'Flair':[[.1453]*3, [.1869]*3],
+    'T1':   [[.1308]*3, [.1031]*3],
+    'T1c':  [[.2381]*3, [.2496]*3],
+    'T2':   [[.1813]*3, [.1712]*3],
+    'Flair':[[.2105]*3, [.1901]*3],
 }
 
 
@@ -173,7 +205,8 @@ class PR_Dataset(Dataset):
             assert(os.path.isfile(f))
 
             self.features.append({
-                'img' : Image.open(f).convert('RGB'),
+                # 'img' : Image.open(f).convert('RGB'),
+                "img" : f,
                 'label' : torch.tensor(label),
             })
 
@@ -190,7 +223,10 @@ class PR_Dataset(Dataset):
     def __getitem__(self, index):
         example = self.features[index].copy()
         #TODO add 4 type of MRI to here
-        example['img'] = self.T(stat[self.dtype])(example['img'])
+        # example['img'] = self.T(stat[self.dtype])(example['img'])
+        example['img'] = self.T(example['img'])
+        # example = self.T(example)
+
         return example
     
 

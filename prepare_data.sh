@@ -3,7 +3,7 @@ cd /home/$workspace/Chemei-PR
 
 echo 'Converting dcm raw dataset into jpg files...'
 
-python3 preprocess/convert_jpg.py
+# python3 preprocess/convert_jpg.py
 
 echo 'Preparing VOC dataset...'
 
@@ -11,10 +11,10 @@ rm -rf ./data/PSPF_voc_data
 
 # T1c
 ../labelme/examples/semantic_segmentation/labelme2voc.py \
-./data/PSPF20210904/PR_jpg/T1c/ ./data/PSPF_voc_data/PR/T1c --labels ./data/segment_label.txt --noviz
+./data/PSPF20210904/PR_jpg/T1/ ./data/PSPF_voc_data/PR/T1 --labels ./data/segment_label.txt --noviz
 
 ../labelme/examples/semantic_segmentation/labelme2voc.py \
-./data/PSPF20210904/non_PR_jpg/T1c/ ./data/PSPF_voc_data/non_PR/T1c --labels ./data/segment_label.txt --noviz
+./data/PSPF20210904/non_PR_jpg/T1/ ./data/PSPF_voc_data/non_PR/T1 --labels ./data/segment_label.txt --noviz
 
 # T1
 # ../labelme/examples/semantic_segmentation/labelme2voc.py \

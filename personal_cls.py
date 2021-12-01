@@ -7,49 +7,49 @@ import numpy as np
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.ensemble import RandomForestClassifier
 import lightgbm as lgb
-
+from sklearn.model_selection import StratifiedKFold
+from sklearn.ensemble import GradientBoostingClassifier
+from imblearn.over_sampling import RandomOverSampler, SMOTE 
 from cfg import *
+import random
 
 
-class CLF(RandomForestClassifier):
-    def predict(self,X, **kwargs):
-        super().__init__(**kwargs)
-        threshold = .5
-        result = self.predict_proba(X, **kwargs)
-        return [1 if p>threshold else 0 for p in result[:,1]]
+def run(X, y, clf, ros=False, thr=.5, prob=False, seed=None, ):
 
+    met =  ['accuracy', 'precision', 'recall', 'roc_auc', 'fpr', 'tpr']
+    metric = ['train_' + val for val in met] + ['test_' + val for val in met]
+    result = {}
+    for m in metric:result[m] = []
+    
+    skf = StratifiedKFold(n_splits=K_FOLD, shuffle=True, random_state=seed)
+    
+    for train_idx, val_idx in skf.split(X, y):
+        X_train, X_test = X[train_idx], X[val_idx]
+        y_train, y_test = y[train_idx], y[val_idx]
 
+        if ros: X_train, y_train = SMOTE(random_state=42).fit_resample(X_train, y_train)
 
-def run():
-        clf = lgb.LGBMClassifier(
-                # class_weight='balanced',
-                max_depth=-1,
-                num_leaves=31,
-                objective='binary',
-                n_estimators=100,
-        )
-        # clf = LogisticRegression(
-        #         solver='liblinear',
-        #         class_weight='balanced',
-        #         max_iter=100,
-        #         # random_state=seed
-        # )
-        # clf = CLF(
-        #         solver='liblinear',
-        #         class_weight='balanced',
-        #         max_iter=-1,
-        #         # threshold=.5
-        # )
-        # clf = CLF(
-        #         class_weight='balanced',
-        #         max_depth=3,
-        #         n_estimators=25,
-        #         # threshold=.5
-        # )
-        # clf = NuSVC(class_weight='balanced', max_iter=-1, nu=.25)
+        clf.fit(X_train, y_train)
+        
+        if prob:
+                y_pred = clf.predict_proba(X_test)
+                fpr, tpr, _ = metrics.roc_curve(y_test, y_pred[:, 1])
+                y_pred = [1 if logit>thr else 0 for logit in y_pred[:, 1]]
+                # print(y_pred[:, 1])
+                
+        else:   
+                y_pred = clf.predict(X_test)
+                y_score = clf.decision_function(X_test)
+                fpr, tpr, _ = metrics.roc_curve(y_test, y_score)
+                
+        result['test_accuracy'].append(metrics.accuracy_score(y_test, y_pred, ),)
+        result['test_precision'].append(metrics.precision_score(y_test, y_pred, zero_division=1),)
+        result['test_recall'].append(metrics.recall_score(y_test, y_pred, zero_division=1),)
+        result['test_roc_auc'].append(metrics.roc_auc_score(y_test, y_pred),)
+        result['test_fpr'].append(fpr)
+        result['test_tpr'].append(tpr)
+    return result
 
-        scoring = ['accuracy', 'precision', 'recall', 'roc_auc']
-        return cross_validate(clf, df, y_df, cv=K_FOLD, scoring=scoring, return_train_score=True)
 
 
 if __name__=='__main__':
@@ -58,11 +58,22 @@ if __name__=='__main__':
         metric = [ 'accuracy', 'precision', 'recall', 'roc_auc']
         metric = ['train_' + val for val in metric] + ['test_' + val for val in metric]
         
+        # clf = GradientBoostingClassifier(n_estimators=100, learning_rate=.1, max_depth=11, )        
+        clf = lgb.LGBMClassifier(
+                boosting_type='dart',
+                max_depth=-1,
+                num_leaves=11,
+                objective='binary',
+                n_estimators=30,
+        )
         total_result = {}
         for m in metric: total_result[m] = []
         
-        for i in range(5):
-                result = run()
+        seeds = random.sample(range(1, 100), NUM_RANDOM_STATE)
+        for i in range(NUM_RANDOM_STATE):
+                result = run(df, y_df, clf, seed=seeds[i]
+                        #      , ros=True
+                )
                 for m in metric: total_result[m].append(result[m])
         
         for m in metric[4:]:  print(m, ':', np.mean(total_result[m])) 

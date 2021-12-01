@@ -1,9 +1,9 @@
 
 echo '********HyperParams*******'
 
-LR=1e-4
+LR=1e-3
 EPOCHS=5
-BATCH_SIZE=16
+BATCH_SIZE=8
 
 # seed=46
 echo "LR : $LR"
@@ -13,12 +13,12 @@ echo '**************************'
 
 
 # ['T1', 'T1c', 'T2', 'Flair']
-for i in $(seq 0 100);
+for i in $(seq 0 5);
 do
     python3 run.py  \
         --gpu 1 \
         --max_epochs $EPOCHS\
         --BATCH_SIZE $BATCH_SIZE\
         --LR $LR \
-        --dtype 'T1'
+        --dtype 'T1c'
 done

@@ -15,6 +15,8 @@ segmented_img_dir = "/home/rockyo/Chemei-PR/data/segmented_img"
 
 
 # Hyperparams
-
+NO_SEGMENTED = False
+NUM_RANDOM_STATE = 15
 K_FOLD=5
 IMAGE_SIZE = 96
+SEEDS = 	[74,53,24,12,37,39,46,9,32,99,84,56,96,47,23]	

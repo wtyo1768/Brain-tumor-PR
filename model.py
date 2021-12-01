@@ -3,11 +3,11 @@ from torch import nn
 from torchmetrics.functional.classification.precision_recall import precision_recall
 from torchmetrics.functional.classification.accuracy import accuracy
 from torchmetrics.functional.classification.f_beta import f1
+from torchmetrics.functional import auroc
 import pytorch_lightning as pl
-import torch.nn.functional as F
 import torchvision.models as models
-import random
-from torchvision import transforms as T
+from efficientnet_pytorch import EfficientNet
+
 from cfg import *
 
 
@@ -16,9 +16,13 @@ class encoder(nn.Module):
         super().__init__()
         self.encoder = encoder
         # EfficientNet.from_pretrained('efficientnet-b2',)
+        for parameter in self.encoder._blocks[:-3].parameters():
+            parameter.requires_grad = False
+            
         self.cw = cw
         self.d_proj = 1000
         self.proj = nn.Sequential(
+            nn.Dropout(.3),
             nn.Linear(self.d_proj, 2),
         )
 
@@ -48,8 +52,8 @@ class cls(pl.LightningModule):
         self.expe = expe    
         self.run = run
         if hparams: self.lr = hparams.LR
-        self.encoder = encoder(models.resnet18(pretrained=True), self.cw)
-
+        # self.encoder = encoder(models.alexnet(pretrained=True), self.cw)
+        self.encoder = encoder(EfficientNet.from_pretrained('efficientnet-b0'), self.cw)
 
     def forward(self, img, label=None,):
         return self.encoder(img, label=label)
@@ -57,7 +61,7 @@ class cls(pl.LightningModule):
 
     def training_step(self, batch, i):
         loss, _, = self.forward(**batch)
-        self.log("loss", loss, on_step=False, prog_bar=False)
+        # self.log("loss", loss, on_step=True, prog_bar=True)
         self.expe.log_metric(f'loss_{self.run}', loss, step=self.global_step)
         return loss
         
@@ -66,34 +70,38 @@ class cls(pl.LightningModule):
         loss, logits = self.forward(**batch)
         self.expe.log_metric(f'val_loss_{self.run}', loss, step=self.global_step)
         label = batch['label'].view(-1)
+        logits = nn.Softmax(dim=1)(logits)
+
         pred = torch.max(logits, dim=1).indices
+        return pred, label, loss
+    
+    
+    def validation_epoch_end(self, val_step_outputs):
+        pred, label, loss =  zip(*val_step_outputs)
+        pred, label, loss = torch.cat(pred), torch.cat(label), torch.stack(loss)
 
-        pr = precision_recall(pred, label, num_classes=1, multiclass=False
-        )
+        trs = .55
+        pr = precision_recall(pred, label, num_classes=1, multiclass=False, threshold=trs)
         metrics = {
-            'val_loss': loss, 
-            'val_acc':  accuracy(pred, label),
-            'f1':       f1(pred, label, num_classes=1, multiclass=False), 
-            'recall':   pr[1],
+            'val_loss': loss.mean(), 
+            'val_acc':  accuracy(pred, label, threshold=trs),
             'prec':     pr[0],
+            'rec':      pr[1],
+            'auroc':    auroc(pred, label, num_classes=1),
         }
-        self.log_dict(
-            metrics, on_epoch=True, prog_bar=True, on_step=False
-        )
-        return metrics
-
+        self.log_dict(metrics, on_epoch=True, prog_bar=True, on_step=False)
 
     def configure_optimizers(self):
-        self.opt = torch.optim.AdamW(self.parameters(), lr=self.lr)
-        lr_schedulers  = {
-            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(
-                self.opt, mode='min',
-                factor=0.2, patience=2,
-                min_lr=1e-6, verbose=True
-            ), 
-            'monitor': 'val_loss'
-        }
-        return [self.opt], [lr_schedulers]
+        self.opt = torch.optim.SGD(self.parameters(), lr=self.lr)
+        # lr_schedulers  = {
+        #     'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(
+        #         self.opt, mode='min',
+        #         factor=0.2, patience=2,
+        #         min_lr=1e-6, verbose=True
+        #     ), 
+        #     'monitor': 'val_loss'
+        # }
+        return [self.opt]#, [lr_schedulers]
 
 
     def optimizer_step(self, epoch_nb, batch_nb, optimizer, optimizer_i, opt_closure,
