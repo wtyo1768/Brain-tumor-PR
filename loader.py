@@ -12,6 +12,8 @@ from sklearn.preprocessing import MinMaxScaler
 from cfg import *
 from sklearn.feature_selection import VarianceThreshold
 from monai import transforms 
+from skimage.feature import texture
+import glob
 
 
 def normalize(df, col):
@@ -19,9 +21,10 @@ def normalize(df, col):
     return df 
 
 
-def numerical_loader():
+def numerical_loader(drop_name=True):
     df = pd.read_excel(xls_file, sheet_name='Sheet2')
-    df = df.drop(columns=df.columns[0])
+    if drop_name:
+        df = df.drop(columns=df.columns[0])
     df = df.drop(columns=[
         'T1+C (srs/img)', 'T1 (srs/img)', 'T2 (srs/img)', 
         'FLAIR (srs/img)', '1st MRI', 'OP date',	
@@ -36,7 +39,7 @@ def numerical_loader():
     ])
     for c in ['ADC tumor', 'Maximal diameter', 'x', 'y', 'z' ]:
         df = normalize(df, c)
-    
+    print(df.shape)
     scaler = MinMaxScaler()
     minmax_col = [
         # 'PR time (months)', 'F/U time (month)', 
@@ -54,7 +57,6 @@ def numerical_loader():
     sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
     df = sel.fit_transform(df)
     masked_columns = sel._get_support_mask()
-    from sklearn.feature_selection import SelectPercentile, chi2, mutual_info_classif
 
     print(origin_columns)
     print(masked_columns.shape, origin_columns.shape)
@@ -62,12 +64,49 @@ def numerical_loader():
     print('Number of Case 1 and Case 2 :', y_df[y_df==0].shape[0],  y_df[y_df==1].shape[0])
     print('-------------------------')
     print("Using feature:")
-    for i, c in enumerate(origin_columns): 
-        if masked_columns[i]: print(i,'|', c)
+
+    used_col = origin_columns[masked_columns]
+    for i, c in enumerate(used_col): print(i,'|', c)
     print('-------------------------')
     # df = SelectPercentile(mutual_info_classif, percentile=70).fit_transform(df, y_df)
 
     return df, y_df
+
+
+def img_features(dtype, return_df=False):
+    def glcm_features(f):
+        img = cv2.imread(f, 0)
+        g = texture.greycomatrix(img, [1, 2, 3, 4, 5, 6, 7], [0, np.pi/2], levels=256, normed=True, symmetric=True)
+        features = []
+        for p in ['contrast', 'dissimilarity', 'homogeneity', 'energy', 'correlation', 'ASM']:
+            f = texture.greycoprops(g, p)
+            features.append(f)
+        return np.array(features).flatten() 
+
+    rawX, y = [], []
+
+    PR = glob.glob(f'{segmented_img_dir}/PR/T1c/*.jpg')
+    non_PR = glob.glob(f'{segmented_img_dir}/non_PR/T1c/*.jpg')
+    y = [1]*len(PR) + [0]*len(non_PR)
+    ALL_PR = PR + non_PR
+    for f in ALL_PR:
+        mri_features = []
+        for d in dtype:
+            textual_feature = glcm_features(f.replace('T1c', d))
+            # print(textual_feature.shape)
+            mri_features.append(textual_feature)
+         
+        rawX.append(np.array(mri_features).flatten())
+    # print(rawX[0].shape)       
+    thr = .8
+    
+    X = VarianceThreshold(threshold=(thr * (1 - thr))).fit_transform(np.array(rawX))
+    rawX = X.tolist()
+    if return_df:
+        rawX = pd.DataFrame({'fname':ALL_PR, 'img_feature':rawX})
+        return rawX, np.array(y)
+    
+    return np.array(rawX), np.array(y)
 
 
 class RandomApply(nn.Module):

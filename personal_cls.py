@@ -1,3 +1,4 @@
+from matplotlib.pyplot import cla
 from sklearn import metrics
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC, NuSVC
@@ -12,6 +13,9 @@ from sklearn.ensemble import GradientBoostingClassifier
 from imblearn.over_sampling import RandomOverSampler, SMOTE 
 from cfg import *
 import random
+from sklearn.feature_selection import SelectPercentile, chi2, mutual_info_classif
+from sklearn import feature_selection
+from sklearn.pipeline import Pipeline
 
 
 def run(X, y, clf, ros=False, thr=.5, prob=False, seed=None, ):
@@ -36,7 +40,6 @@ def run(X, y, clf, ros=False, thr=.5, prob=False, seed=None, ):
                 fpr, tpr, _ = metrics.roc_curve(y_test, y_pred[:, 1])
                 y_pred = [1 if logit>thr else 0 for logit in y_pred[:, 1]]
                 # print(y_pred[:, 1])
-                
         else:   
                 y_pred = clf.predict(X_test)
                 y_score = clf.decision_function(X_test)
@@ -51,6 +54,19 @@ def run(X, y, clf, ros=False, thr=.5, prob=False, seed=None, ):
     return result
 
 
+clf = lgb.LGBMClassifier(
+   # boosting_type='dart',
+   max_depth=-1,
+   num_leaves=6,
+   objective='binary',
+   n_estimators=25,
+   # class_weight='balanced'
+)
+
+clf = Pipeline([
+    ('selector', SelectPercentile(feature_selection.f_classif, percentile=50)), 
+    ('lgb', clf)
+])
 
 if __name__=='__main__':
         df, y_df  = numerical_loader()
@@ -58,20 +74,14 @@ if __name__=='__main__':
         metric = [ 'accuracy', 'precision', 'recall', 'roc_auc']
         metric = ['train_' + val for val in metric] + ['test_' + val for val in metric]
         
-        # clf = GradientBoostingClassifier(n_estimators=100, learning_rate=.1, max_depth=11, )        
-        clf = lgb.LGBMClassifier(
-                boosting_type='dart',
-                max_depth=-1,
-                num_leaves=11,
-                objective='binary',
-                n_estimators=30,
-        )
+        
         total_result = {}
         for m in metric: total_result[m] = []
         
-        seeds = random.sample(range(1, 100), NUM_RANDOM_STATE)
+        # SEEDS = random.sample(range(1, 100), NUM_RANDOM_STATE)
         for i in range(NUM_RANDOM_STATE):
-                result = run(df, y_df, clf, seed=seeds[i]
+                print(df.shape)
+                result = run(df, y_df, clf, seed=SEEDS[i], prob=True, thr=.5
                         #      , ros=True
                 )
                 for m in metric: total_result[m].append(result[m])
