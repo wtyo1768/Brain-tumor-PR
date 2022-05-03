@@ -4,3 +4,9 @@ checkpoints
 .ipynb_checkpoints
 __pycache__
 .cometml-runs
+
+result.ipynb
+*.out
+*.csv
+*.config
+.comet.config
