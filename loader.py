@@ -39,10 +39,9 @@ def numerical_loader(drop_name=True):
     ])
     for c in ['ADC tumor', 'Maximal diameter', 'x', 'y', 'z' ]:
         df = normalize(df, c)
-    print(df.shape)
+  
     scaler = MinMaxScaler()
     minmax_col = [
-        # 'PR time (months)', 'F/U time (month)', 
         'Age',
     ]
     df[minmax_col] = scaler.fit_transform(df[minmax_col])
@@ -69,7 +68,10 @@ def numerical_loader(drop_name=True):
     for i, c in enumerate(used_col): print(i,'|', c)
     print('-------------------------')
     # df = SelectPercentile(mutual_info_classif, percentile=70).fit_transform(df, y_df)
-
+    ## VIS
+    # mask = [  True, True,  True,  True,  True, False, False,  True, False,  True,  True,  True,  True,
+    #             True,  True, False,  True]
+    # df = df[:, mask]
     return df, y_df
 
 

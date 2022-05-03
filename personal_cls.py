@@ -57,16 +57,16 @@ def run(X, y, clf, ros=False, thr=.5, prob=False, seed=None, ):
 clf = lgb.LGBMClassifier(
    # boosting_type='dart',
    max_depth=-1,
-   num_leaves=6,
+   num_leaves=11,
    objective='binary',
    n_estimators=25,
    # class_weight='balanced'
 )
 
-clf = Pipeline([
-    ('selector', SelectPercentile(feature_selection.f_classif, percentile=50)), 
-    ('lgb', clf)
-])
+# clf = Pipeline([
+#     ('selector', SelectPercentile(feature_selection.f_classif, percentile=75)), 
+#     ('lgb', clf)
+# ])
 
 if __name__=='__main__':
         df, y_df  = numerical_loader()
@@ -85,5 +85,5 @@ if __name__=='__main__':
                         #      , ros=True
                 )
                 for m in metric: total_result[m].append(result[m])
-        
+
         for m in metric[4:]:  print(m, ':', np.mean(total_result[m])) 
