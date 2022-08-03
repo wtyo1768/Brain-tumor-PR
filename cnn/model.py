@@ -7,7 +7,6 @@ from torchmetrics.functional import auroc
 import pytorch_lightning as pl
 import torchvision.models as models
 from efficientnet_pytorch import EfficientNet
-
 from cfg import *
 
 
@@ -15,7 +14,7 @@ class encoder(nn.Module):
     def __init__(self, encoder, cw):
         super().__init__()
         self.encoder = encoder
-        # EfficientNet.from_pretrained('efficientnet-b2',)
+
         for parameter in self.encoder._blocks[:-3].parameters():
             parameter.requires_grad = False
             

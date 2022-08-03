@@ -1,8 +1,10 @@
-# Preprocess Command store in prepare_data.sh
+# You can ignore cnn directory 
 
-## clone labelme at your home directory (https://github.com/wkentaro/labelme)
+# Overall preprocess command store in prepare_data.sh
 
-## 1. Prepare raw dcm dataset : ./data/PSPF 20210904 
+# If need to revise image label, clone labelme at your home directory (https://github.com/wkentaro/labelme)
+
+## 1. Raw dcm dataset : ./data/PSPF 20210904 
 
 ## 2. Run prepare_data.sh
 

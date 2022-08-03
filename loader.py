@@ -1,10 +1,9 @@
 import pandas as pd
 import torch
 import numpy as np
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 import cv2
 import os
-from PIL import Image
 from torchvision import transforms as T
 import random
 from torch import nn
@@ -21,6 +20,11 @@ def normalize(df, col):
     return df 
 
 
+'''
+description: load xls file 
+param {bool} drop patient ID
+return {tuple}
+'''
 def numerical_loader(drop_name=True):
     df = pd.read_excel(xls_file, sheet_name='Sheet2')
     if drop_name:
@@ -30,7 +34,6 @@ def numerical_loader(drop_name=True):
         'FLAIR (srs/img)', '1st MRI', 'OP date',	
         'The Latest MRI ', 'Date of MRI with P/R ',
         '1st MRI.1',
-        # 'x', 'y', 'z', 
         'WHO grade 1.2.3 (benign, atypical, malignant)', '> 1y F/U MRI after OP (Y:1 N:0)', 
         'Location 1: Skull base(SB), 2: PSPF, 3: Convexity, 4: Others',
         'F/U time (month)', 'PR time (months)',
@@ -41,10 +44,10 @@ def numerical_loader(drop_name=True):
         df = normalize(df, c)
   
     scaler = MinMaxScaler()
-    minmax_col = [
-        'Age',
-    ]
+    minmax_col = [ 'Age', ]
+    
     df[minmax_col] = scaler.fit_transform(df[minmax_col])
+    # onehot encoding
     df = pd.get_dummies(df,prefix=['Special histology'], columns = ['Special histology (0:meningothelial 1:fibroblastic 2: angiomatous 3:transitional (mixed) 4:psammoma 5: microcystic 6: metaplastic'])
     df = pd.get_dummies(df,prefix=['Simpson grade resection'], columns = ['Simpson grade resection (1-5)'])
 
@@ -52,30 +55,30 @@ def numerical_loader(drop_name=True):
     y_df = df.pop('Progression/Recurrence (Yes:1 No:0)')
     y_df = y_df.astype('int32')
 
+    # Feature selection by VT
     origin_columns = df.columns
     sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
     df = sel.fit_transform(df)
     masked_columns = sel._get_support_mask()
-
-    print(origin_columns)
-    print(masked_columns.shape, origin_columns.shape)
+    
     print('Number of Patients and feature :', df.shape[0], df.shape[1], )
     print('Number of Case 1 and Case 2 :', y_df[y_df==0].shape[0],  y_df[y_df==1].shape[0])
     print('-------------------------')
     print("Using feature:")
-
     used_col = origin_columns[masked_columns]
-    for i, c in enumerate(used_col): print(i,'|', c)
+    print(used_col)
     print('-------------------------')
-    # df = SelectPercentile(mutual_info_classif, percentile=70).fit_transform(df, y_df)
-    ## VIS
-    # mask = [  True, True,  True,  True,  True, False, False,  True, False,  True,  True,  True,  True,
-    #             True,  True, False,  True]
-    # df = df[:, mask]
     return df, y_df
 
 
-def img_features(dtype, return_df=False):
+'''
+description: Generate GLCM feature for give MRI types
+param {array} dtype: MRI types 
+param {bool} return_df
+param {bool} mode: feature fusion methods for multi-modality GLCM features
+return {tuple} training data (X,y)
+'''
+def img_features(dtype, return_df=False, mode='min'):
     def glcm_features(f):
         img = cv2.imread(f, 0)
         g = texture.greycomatrix(img, [1, 2, 3, 4, 5, 6, 7], [0, np.pi/2], levels=256, normed=True, symmetric=True)
@@ -92,16 +95,17 @@ def img_features(dtype, return_df=False):
     y = [1]*len(PR) + [0]*len(non_PR)
     ALL_PR = PR + non_PR
     for f in ALL_PR:
-        mri_features = []
-        for d in dtype:
-            textual_feature = glcm_features(f.replace('T1c', d))
-            # print(textual_feature.shape)
-            mri_features.append(textual_feature)
-         
+        mri_features = np.array([glcm_features(f.replace('T1c', d)) for d in dtype])
+        if mode=='min':
+            mri_features = mri_features.min(axis=0)
+        elif mode=='max':
+            mri_features = mri_features.max(axis=0)
+        elif mode=='avg':
+            mri_features = mri_features.mean(axis=0)
+        
         rawX.append(np.array(mri_features).flatten())
-    # print(rawX[0].shape)       
+        
     thr = .8
-    
     X = VarianceThreshold(threshold=(thr * (1 - thr))).fit_transform(np.array(rawX))
     rawX = X.tolist()
     if return_df:
@@ -110,7 +114,9 @@ def img_features(dtype, return_df=False):
     
     return np.array(rawX), np.array(y)
 
-
+''' 
+Deep learning based methods, can ignore
+'''
 class RandomApply(nn.Module):
     def __init__(self, fn, p):
         super().__init__()
@@ -273,7 +279,7 @@ class PR_Dataset(Dataset):
 
 
 if __name__ == '__main__':
-    df = pd.read_excel(xls_file, sheet_name='Sheet2')
-    # ['T1', 'T1c', 'T2', 'Flair']
-    #TODO Fix T1c to T1
-    print(PR_Dataset(df, 'T1c').__getitem__(1)['img'].size())
+    dtype = ['T1', 'T1c', 'T2', 'Flair']
+
+    X, y = img_features(dtype)
+    print(X.shape)

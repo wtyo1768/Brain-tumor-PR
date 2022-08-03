@@ -7,7 +7,6 @@ import pytorch_lightning as pl
 from sklearn.model_selection import StratifiedKFold
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-
 from cfg import *
 from loader import PR_Dataset
 from model import cls

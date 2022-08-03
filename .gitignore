@@ -10,3 +10,4 @@ result.ipynb
 *.csv
 *.config
 .comet.config
+*.jpg
